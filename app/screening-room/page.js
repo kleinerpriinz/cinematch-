@@ -92,12 +92,33 @@ export default function ScreeningRoom() {
   }
 
   async function startWeek() {
+    const { data: allMembers } = await supabase
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', group.id)
+
+    const { data: lastWeeks } = await supabase
+      .from('weeks')
+      .select('moderator_id')
+      .eq('group_id', group.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const usedMods = lastWeeks?.map(w => w.moderator_id) || []
+    const members = allMembers || []
+    
+    let nextMod = members.find(m => !usedMods.includes(m.user_id))
+    if (!nextMod) nextMod = members[0]
+
+    const weekNum = (lastWeeks?.length || 0) + 1
+
     const { data } = await supabase.from('weeks').insert({
       group_id: group.id,
-      week_number: 1,
+      week_number: weekNum,
       phase: 'voting',
-      moderator_id: user.id
+      moderator_id: nextMod?.user_id || user.id
     }).select().single()
+    
     setWeek(data)
     setFilms([])
   }
@@ -138,12 +159,19 @@ export default function ScreeningRoom() {
     return votes.filter(v => v.film_id === filmId).length
   }
 
+  async function closeWeek() {
+    const counts = {}
+    votes.forEach(v => counts[v.film_id] = (counts[v.film_id] || 0) + 1)
+    if (Object.keys(counts).length === 0) return
+    const winnerId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
+    await supabase.from('weeks').update({ phase: 'review', winner_film_id: winnerId }).eq('id', week.id)
+    setWeek({ ...week, phase: 'review', winner_film_id: winnerId })
+  }
+
   if (!user || !group) return null
 
   return (
     <main style={{ minHeight: '100vh', background: '#0e0e0f', color: '#e8e4dc', fontFamily: 'sans-serif' }}>
-
-
       <div style={{ padding: '2rem 24px', maxWidth: '800px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
@@ -207,17 +235,14 @@ export default function ScreeningRoom() {
                       <div style={{ padding: '12px' }}>
                         <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>{film.title}</div>
                         <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>{film.year}</div>
-
                         <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
                           {[1, 2, 3].map(level => (
                             <div key={level} style={{ height: '3px', flex: 1, borderRadius: '2px', background: revealed >= level ? '#c0392b' : '#2a2820', cursor: 'pointer' }} onClick={() => toggleReveal(film.id, level)} />
                           ))}
                         </div>
-
                         {revealed >= 1 && <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>Jahr: {film.year}</div>}
                         {revealed >= 2 && <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>TMDB ID: {film.tmdb_id}</div>}
                         {revealed >= 3 && <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Vollständige Infos auf TMDB</div>}
-
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
                           <div style={{ fontSize: '12px', color: '#666' }}>{voteCount} {voteCount === 1 ? 'Vote' : 'Votes'}</div>
                           <button
@@ -232,6 +257,22 @@ export default function ScreeningRoom() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {films.length > 0 && (
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '0.5px solid #2a2820' }}>
+                <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
+                  Alle haben abgestimmt? Dann Woche abschließen und zum Stimmungsbarometer.
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={closeWeek} style={{ background: '#181614', border: '0.5px solid #2a2820', borderRadius: '8px', color: '#888', padding: '9px 16px', fontSize: '13px', cursor: 'pointer' }}>
+                    Woche abschließen
+                  </button>
+                  <a href="/rating" style={{ background: '#c0392b', border: 'none', borderRadius: '8px', color: '#fff', padding: '9px 16px', fontSize: '13px', textDecoration: 'none', display: 'inline-block' }}>
+                    Zum Stimmungsbarometer
+                  </a>
+                </div>
               </div>
             )}
           </>

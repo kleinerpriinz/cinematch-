@@ -85,8 +85,32 @@ export default function Rating() {
     })
     setMyRating(sliderVal)
     setSubmitted(true)
-    const { data } = await supabase.from('ratings').select().eq('week_id', week.id)
-    setRatings(data || [])
+
+    const { data: allRatings } = await supabase
+      .from('ratings')
+      .select()
+      .eq('week_id', week.id)
+    setRatings(allRatings || [])
+
+    if (allRatings?.length >= 1 && week.moderator_id) {
+      const avg = Math.round(allRatings.reduce((a, b) => a + b.score, 0) / allRatings.length)
+      const points = Math.round(avg / 10)
+
+      const { data: modMember } = await supabase
+        .from('group_members')
+        .select('cine_points')
+        .eq('user_id', week.moderator_id)
+        .eq('group_id', group.id)
+        .single()
+
+      if (modMember) {
+        await supabase
+          .from('group_members')
+          .update({ cine_points: (modMember.cine_points || 0) + points })
+          .eq('user_id', week.moderator_id)
+          .eq('group_id', group.id)
+      }
+    }
   }
 
   function getMoodLabel(val) {
