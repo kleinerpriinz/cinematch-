@@ -15,6 +15,7 @@ export default function Nav() {
     { href: '/screening-room', label: 'Screening Room' },
     { href: '/rating', label: 'Bewertung' },
     { href: '/members', label: 'Members' },
+    { href: '/vault', label: 'The Vault' },
   ]
 
   if (pathname === '/') return null

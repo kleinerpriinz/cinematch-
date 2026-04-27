@@ -25,6 +25,31 @@ export default function ScreeningRoom() {
     })
   }, [])
 
+  useEffect(() => {
+    if (!week) return
+    const channel = supabase
+      .channel('screening-room')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'votes',
+        filter: `week_id=eq.${week.id}`
+      }, () => {
+        loadFilms(week.id, user.id)
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'films',
+        filter: `week_id=eq.${week.id}`
+      }, () => {
+        loadFilms(week.id, user.id)
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [week])
+
   async function loadData(userId) {
     const { data: memberData } = await supabase
       .from('group_members')
