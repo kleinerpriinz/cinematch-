@@ -21,6 +21,10 @@ export default function ScreeningRoom() {
   const [inviteCode, setInviteCode] = useState('')
   const [groupName, setGroupName] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [showRatingModal, setShowRatingModal] = useState(false)
+const [ratingSlider, setRatingSlider] = useState(50)
+const [ratingSubmitted, setRatingSubmitted] = useState(false)
+const [myRatingScore, setMyRatingScore] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -138,6 +142,19 @@ export default function ScreeningRoom() {
     await supabase.from('group_members').insert({ group_id: groupData.id, user_id: user.id })
     setGroup(groupData); setNoGroup(false)
     loadData(user.id)
+  }
+
+  async function submitRating() {
+    await supabase.from('ratings').insert({ week_id: week.id, user_id: user.id, score: ratingSlider })
+    setMyRatingScore(ratingSlider)
+    setRatingSubmitted(true)
+    if (week.moderator_id) {
+      const avg = ratingSlider
+      const points = Math.round(avg / 10)
+      const { data: modMember } = await supabase.from('group_members').select('cine_points').eq('user_id', week.moderator_id).eq('group_id', group.id).single()
+      if (modMember) await supabase.from('group_members').update({ cine_points: (modMember.cine_points || 0) + points }).eq('user_id', week.moderator_id).eq('group_id', group.id)
+    }
+    setTimeout(() => { setShowRatingModal(false); setRatingSubmitted(false) }, 1500)
   }
 
   if (!user) return null
@@ -272,9 +289,9 @@ export default function ScreeningRoom() {
                 )
               })}
             </div>
-            <a href="/rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(200,169,110,0.1)', border: '1px solid rgba(200,169,110,0.4)', borderRadius: '8px', color: '#c8a96e', padding: '12px 24px', fontSize: '14px', textDecoration: 'none', marginBottom: '1.5rem' }}>
-              ✏ Film bewerten
-            </a>
+            <button onClick={() => setShowRatingModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(200,169,110,0.1)', border: '1px solid rgba(200,169,110,0.4)', borderRadius: '8px', color: '#c8a96e', padding: '12px 24px', fontSize: '14px', cursor: 'pointer', marginBottom: '1.5rem' }}>
+  ✏ Film bewerten
+</button>
             <div style={{ fontSize: '12px', color: '#444', marginTop: '8px' }}>
               🔒 Die Ergebnisse werden erst sichtbar, wenn alle bewertet haben.
             </div>
@@ -404,6 +421,40 @@ export default function ScreeningRoom() {
           </>
         )}
       </div>
+      {showRatingModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#111', border: '0.5px solid #222', borderRadius: '16px', padding: '2.5rem', width: '100%', maxWidth: '520px', position: 'relative' }}>
+            <button onClick={() => setShowRatingModal(false)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', color: '#555', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            {!ratingSubmitted ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>Wie fandest DU</div>
+                  <div style={{ fontFamily: 'Georgia, serif', fontSize: '36px', fontWeight: '600', color: '#e8e4dc', marginBottom: '12px' }}>{winnerFilm?.title}?</div>
+                  <div style={{ fontSize: '14px', color: '#555' }}>Bewege den Slider und logge deine Meinung.</div>
+                </div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <input type="range" min="0" max="100" step="1" value={ratingSlider} onChange={e => setRatingSlider(parseInt(e.target.value))} style={{ width: '100%', height: '4px', appearance: 'none', background: `linear-gradient(to right, #c0392b 0%, #c8a96e ${ratingSlider}%, #333 ${ratingSlider}%)`, borderRadius: '2px', outline: 'none', cursor: 'pointer' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#444', marginTop: '8px' }}>
+                    <span>Schlecht</span>
+                    <span>Exzellent</span>
+                  </div>
+                </div>
+                <button onClick={submitRating} style={{ width: '100%', padding: '14px', background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.4)', borderRadius: '10px', color: '#c8a96e', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
+                  ✦ Bewertung speichern
+                </button>
+                <div style={{ textAlign: 'center', fontSize: '12px', color: '#444' }}>
+                  🔒 Die Ergebnisse der anderen siehst du erst, wenn alle bewertet haben.
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '1rem' }}>
+                <div style={{ fontSize: '32px', color: '#c8a96e', marginBottom: '1rem' }}>✦</div>
+                <div style={{ fontSize: '18px', color: '#e8e4dc' }}>Bewertung gespeichert</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   )
 }
