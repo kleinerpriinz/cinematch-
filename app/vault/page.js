@@ -71,7 +71,7 @@ export default function Vault() {
 {/* Backdrop */}
 {sw?.winnerFilm?.backdrop_path && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundImage: `url(https://image.tmdb.org/t/p/original${sw.winnerFilm.backdrop_path})`, backgroundSize: 'cover', backgroundPosition: 'center top' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(8,8,8,0.97) 320px, rgba(8,8,8,0.55) 60%, rgba(8,8,8,0.2))' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(8,8,8,0.97) 320px, rgba(8,8,8,0.55) 60%, rgba(8,8,8,0.85))' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,8,0.8) 0%, transparent 50%)' }} />
           {sw?.avgRating !== null && sw?.avgRating !== undefined && (
             <>
@@ -106,7 +106,7 @@ export default function Vault() {
                   {week.winnerFilm && (
                     <div style={{ background: isSelected ? 'rgba(200,169,110,0.08)' : 'transparent', border: `0.5px solid ${isSelected ? 'rgba(200,169,110,0.2)' : 'transparent'}`, borderRadius: '8px', padding: isSelected ? '8px' : '0', display: 'flex', gap: '8px', alignItems: 'center' }}>
                       {week.winnerFilm.poster_path && (
-                        <img src={`https://image.tmdb.org/t/p/w92${week.winnerFilm.poster_path}`} style={{ width: '32px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                        <img src={`https://image.tmdb.org/t/p/w185${week.winnerFilm.poster_path}`} style={{ width: '32px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                       )}
                       <div>
                         <div style={{ fontSize: '13px', color: isSelected ? '#e8e4dc' : '#666', fontWeight: isSelected ? '500' : '400' }}>{week.winnerFilm.title}</div>
@@ -128,7 +128,7 @@ export default function Vault() {
             <div style={{ fontSize: '11px', color: '#c8a96e', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
               Woche {sw.week_number}
             </div>
-            <div style={{ fontSize: '52px', fontWeight: '600', lineHeight: 1, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '60px', fontWeight: '600', lineHeight: 1, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
               {sw.winnerFilm?.title || 'Kein Film'}
             </div>
             <div style={{ fontSize: '16px', color: '#888', marginBottom: '2rem' }}>
