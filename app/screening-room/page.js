@@ -377,11 +377,14 @@ export default function ScreeningRoom() {
                           </div>
                           {voters.length > 0 && (
                             <div style={{ display: 'flex', gap: '3px' }}>
-                              {voters.slice(0, 4).map((voter, i) => (
-                                <div key={i} style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#222', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', color: '#888' }}>
-                                  {getInitials(voter)}
-                                </div>
-                              ))}
+{voters.slice(0, 4).map((voter, i) => (
+  <div key={i} style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#222', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', color: '#888', overflow: 'hidden' }}>
+    {voter.users?.avatar_url
+      ? <img src={voter.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      : getInitials(voter)
+    }
+  </div>
+))}
                             </div>
                           )}
                         </div>
