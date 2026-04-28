@@ -19,7 +19,7 @@ export default function Vault() {
     const { data: memberData } = await supabase.from('group_members').select('group_id, groups(id, name)').eq('user_id', userId).single()
     if (!memberData) return
     setGroup(memberData.groups)
-    const { data: membersData } = await supabase.from('group_members').select('user_id, cine_points, users(username, email)').eq('group_id', memberData.groups.id).order('cine_points', { ascending: false })
+    const { data: membersData } = await supabase.from('group_members').select('user_id, cine_points, users(username, email, avatar_url)').eq('group_id', memberData.groups.id).order('cine_points', { ascending: false })
     setMembers(membersData || [])
     const { data: weeksData } = await supabase.from('weeks').select().eq('group_id', memberData.groups.id).order('created_at', { ascending: false })
     const weeksWithDetails = await Promise.all((weeksData || []).map(async week => {
@@ -69,9 +69,12 @@ export default function Vault() {
             return (
               <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ fontSize: '11px', color: '#333', width: '16px' }}>#{index + 1}</div>
-                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: index === 0 ? 'rgba(200,169,110,0.15)' : '#111', border: `1px solid ${index === 0 ? '#c8a96e' : '#222'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: index === 0 ? '#c8a96e' : '#555', flexShrink: 0 }}>
-                  {getInitials(member)}
-                </div>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: index === 0 ? 'rgba(200,169,110,0.15)' : '#111', border: `1px solid ${index === 0 ? '#c8a96e' : '#222'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: index === 0 ? '#c8a96e' : '#555', flexShrink: 0, overflow: 'hidden' }}>
+  {member.users?.avatar_url
+    ? <img src={member.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    : getInitials(member)
+  }
+</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '12px', color: isMe ? '#e8e4dc' : '#666', marginBottom: '3px' }}>
                     {member.users?.username || member.users?.email}

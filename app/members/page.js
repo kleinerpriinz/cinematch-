@@ -18,7 +18,7 @@ export default function Members() {
     const { data: memberData } = await supabase.from('group_members').select('group_id, groups(id, name, invite_code)').eq('user_id', userId).single()
     if (!memberData) return
     setGroup(memberData.groups)
-    const { data: membersData } = await supabase.from('group_members').select('user_id, is_moderator, cine_points, users(username, email)').eq('group_id', memberData.groups.id).order('cine_points', { ascending: false })
+    const { data: membersData } = await supabase.from('group_members').select('user_id, is_moderator, cine_points, users(username, email, avatar_url)').eq('group_id', memberData.groups.id).order('cine_points', { ascending: false })
     setMembers(membersData || [])
   }
 
@@ -66,9 +66,12 @@ export default function Members() {
             return (
               <div key={member.user_id} style={{ background: '#0e0e0e', border: `0.5px solid ${isMe ? '#c8a96e33' : '#1a1a1a'}`, borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ fontSize: '13px', color: '#333', width: '20px', textAlign: 'center' }}>#{index + 1}</div>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `${col}18`, border: `1.5px solid ${col}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '500', color: col, flexShrink: 0 }}>
-                  {getInitials(member)}
-                </div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `${col}18`, border: `1.5px solid ${col}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '500', color: col, flexShrink: 0, overflow: 'hidden' }}>
+  {member.users?.avatar_url
+    ? <img src={member.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    : getInitials(member)
+  }
+</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '500', marginBottom: '2px' }}>
                     {member.users?.username || member.users?.email}

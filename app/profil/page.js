@@ -25,14 +25,35 @@ export default function Profil() {
     const file = e.target.files[0]
     if (!file) return
     setUploading(true)
+    
     const ext = file.name.split('.').pop()
-    const path = `${user.id}.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (!error) {
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.from('users').update({ avatar_url: urlData.publicUrl }).eq('id', user.id)
-      setProfile(prev => ({ ...prev, avatar_url: urlData.publicUrl }))
+    const path = `avatar-${user.id}.${ext}`
+    
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { 
+        upsert: true,
+        contentType: file.type
+      })
+    
+    if (error) {
+      console.error('Upload error:', error)
+      setUploading(false)
+      return
     }
+    
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(path)
+    
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ avatar_url: urlData.publicUrl })
+      .eq('id', user.id)
+    
+    if (updateError) console.error('Update error:', updateError)
+    else setProfile(prev => ({ ...prev, avatar_url: urlData.publicUrl }))
+    
     setUploading(false)
   }
 

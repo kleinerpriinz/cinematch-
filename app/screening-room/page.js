@@ -47,7 +47,7 @@ export default function ScreeningRoom() {
     }
     
     setGroup(memberData.groups)
-    const { data: membersData } = await supabase.from('group_members').select('user_id, users(username, email)').eq('group_id', memberData.groups.id)
+    const { data: membersData } = await supabase.from('group_members').select('user_id, users(username, email, avatar_url)').eq('group_id', memberData.groups.id)
     setMembers(membersData || [])
     const { data: weekData } = await supabase.from('weeks').select().eq('group_id', memberData.groups.id).order('created_at', { ascending: false }).limit(1).single()
     if (weekData) {
@@ -216,9 +216,12 @@ export default function ScreeningRoom() {
               </div>
               <div style={{ background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.3)', borderRadius: '12px', padding: '1rem', flex: 1 }}>
                 <div style={{ fontSize: '10px', color: '#c8a96e', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Diese Woche</div>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '500', marginBottom: '8px', border: '1px solid #333' }}>
-                  {getInitials(mod)}
-                </div>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '500', marginBottom: '8px', border: '1px solid #333', overflow: 'hidden' }}>
+  {mod.users?.avatar_url 
+    ? <img src={mod.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    : getInitials(mod)
+  }
+</div>
                 <div style={{ fontSize: '15px', fontWeight: '500' }}>{mod.users?.username || mod.users?.email}</div>
                 <div style={{ fontSize: '12px', color: '#c8a96e', marginTop: '6px' }}>★ Moderator</div>
               </div>
