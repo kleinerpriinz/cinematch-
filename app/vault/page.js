@@ -11,33 +11,21 @@ export default function Vault() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) window.location.href = '/'
-      else {
-        setUser(data.user)
-        loadData(data.user.id)
-      }
+      else { setUser(data.user); loadData(data.user.id) }
     })
   }, [])
 
   async function loadData(userId) {
-    const { data: memberData } = await supabase
-      .from('group_members')
-      .select('group_id, groups(id, name)')
-      .eq('user_id', userId)
-      .single()
+    const { data: memberData } = await supabase.from('group_members').select('group_id, groups(id, name)').eq('user_id', userId).single()
     if (!memberData) return
     setGroup(memberData.groups)
-
-    const { data: weeksData } = await supabase
-      .from('weeks')
-      .select()
-      .eq('group_id', memberData.groups.id)
-      .order('created_at', { ascending: false })
-    
+    const { data: membersData } = await supabase.from('group_members').select('user_id, cine_points, users(username, email)').eq('group_id', memberData.groups.id).order('cine_points', { ascending: false })
+    setMembers(membersData || [])
+    const { data: weeksData } = await supabase.from('weeks').select().eq('group_id', memberData.groups.id).order('created_at', { ascending: false })
     const weeksWithDetails = await Promise.all((weeksData || []).map(async week => {
       const { data: films } = await supabase.from('films').select().eq('week_id', week.id)
       const { data: votes } = await supabase.from('votes').select().eq('week_id', week.id)
       const { data: ratings } = await supabase.from('ratings').select().eq('week_id', week.id)
-      
       let winnerFilm = null
       if (films?.length && votes?.length) {
         const counts = {}
@@ -45,22 +33,10 @@ export default function Vault() {
         const winnerId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
         winnerFilm = films.find(f => f.id === winnerId)
       }
-
-      const avgRating = ratings?.length
-        ? Math.round(ratings.reduce((a, b) => a + b.score, 0) / ratings.length)
-        : null
-
+      const avgRating = ratings?.length ? Math.round(ratings.reduce((a, b) => a + b.score, 0) / ratings.length) : null
       return { ...week, films, votes, ratings, winnerFilm, avgRating }
     }))
-
     setWeeks(weeksWithDetails)
-
-    const { data: membersData } = await supabase
-      .from('group_members')
-      .select('user_id, cine_points, users(username, email)')
-      .eq('group_id', memberData.groups.id)
-      .order('cine_points', { ascending: false })
-    setMembers(membersData || [])
   }
 
   function getMoodLabel(val) {
@@ -69,88 +45,86 @@ export default function Vault() {
     return labels[Math.round(val / 100 * (labels.length - 1))]
   }
 
-  function getColor(index) {
-    const colors = [
-      { bg: '#2a1a08', color: '#BA7517' },
-      { bg: '#0f2a1a', color: '#1D9E75' },
-      { bg: '#0e151a', color: '#378ADD' },
-      { bg: '#1a0f1a', color: '#7F77DD' },
-      { bg: '#2a1010', color: '#c0392b' },
-    ]
-    return colors[index % colors.length]
+  function getInitials(member) {
+    return (member?.users?.username || member?.users?.email || '?').substring(0, 2).toUpperCase()
   }
 
   if (!user || !group) return null
+  const maxPts = Math.max(...members.map(m => m.cine_points || 0), 1)
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0e0e0f', color: '#e8e4dc', fontFamily: 'sans-serif' }}>
-      <div style={{ padding: '2rem 24px', maxWidth: '800px' }}>
-        <div style={{ fontSize: '22px', marginBottom: '4px' }}>The Vault</div>
-        <div style={{ fontSize: '13px', color: '#666', marginBottom: '2rem' }}>{group.name} — Archiv & Statistiken</div>
+    <main style={{ minHeight: '100vh', background: '#080808', color: '#e8e4dc', fontFamily: 'sans-serif', display: 'flex' }}>
 
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Cine-Points Rangliste</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {members.map((member, index) => {
-              const col = getColor(index)
-              const isMe = member.user_id === user.id
-              return (
-                <div key={member.user_id} style={{ background: '#181614', border: `0.5px solid ${isMe ? '#c0392b' : '#2a2820'}`, borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '13px', color: '#444', width: '16px' }}>#{index + 1}</div>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: col.bg, color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '500', border: `0.5px solid ${col.color}`, flexShrink: 0 }}>
-                    {(member.users?.username || member.users?.email || '?').substring(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, fontSize: '13px' }}>
+      {/* Sidebar */}
+      <div style={{ width: '280px', flexShrink: 0, borderRight: '0.5px solid #1a1a1a', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontFamily: 'Georgia, serif', fontSize: '13px', letterSpacing: '0.25em', color: '#e8e4dc', marginBottom: '3rem' }}>
+          CINE<span style={{ color: '#c8a96e' }}>MATCH</span>
+        </div>
+
+        <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>Cine-Points</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '2rem' }}>
+          {members.map((member, index) => {
+            const pct = Math.round((member.cine_points || 0) / maxPts * 100)
+            const isMe = member.user_id === user.id
+            return (
+              <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#333', width: '16px' }}>#{index + 1}</div>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: index === 0 ? 'rgba(200,169,110,0.15)' : '#111', border: `1px solid ${index === 0 ? '#c8a96e' : '#222'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: index === 0 ? '#c8a96e' : '#555', flexShrink: 0 }}>
+                  {getInitials(member)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', color: isMe ? '#e8e4dc' : '#666', marginBottom: '3px' }}>
                     {member.users?.username || member.users?.email}
-                    {isMe && <span style={{ fontSize: '11px', color: '#555', marginLeft: '6px' }}>du</span>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '80px', height: '4px', background: '#2a2820', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', background: index === 0 ? '#BA7517' : '#c0392b', borderRadius: '2px', width: `${Math.round((member.cine_points || 0) / Math.max(...members.map(m => m.cine_points || 1)) * 100)}%` }} />
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: '500', color: index === 0 ? '#BA7517' : '#666', minWidth: '40px', textAlign: 'right' }}>
-                      {member.cine_points || 0}
-                    </div>
+                  <div style={{ height: '2px', background: '#1a1a1a', borderRadius: '1px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: index === 0 ? '#c8a96e' : '#333', width: `${pct}%` }} />
                   </div>
-                  {index === 0 && <div style={{ fontSize: '10px', background: '#2a1a08', color: '#BA7517', padding: '2px 8px', borderRadius: '20px', border: '0.5px solid #BA7517' }}>★ Top</div>}
                 </div>
-              )
-            })}
-          </div>
+                <div style={{ fontSize: '12px', color: index === 0 ? '#c8a96e' : '#444', minWidth: '28px', textAlign: 'right' }}>
+                  {member.cine_points || 0}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, padding: '3rem 2.5rem' }}>
+        <div style={{ fontSize: '11px', color: '#c8a96e', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1rem' }}>The Vault</div>
+        <div style={{ fontSize: '40px', fontWeight: '600', letterSpacing: '-0.02em', marginBottom: '3rem' }}>
+          {weeks.length} {weeks.length === 1 ? 'Woche' : 'Wochen'} zusammen
         </div>
 
-        <div>
-          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Vergangene Wochen</div>
-          {weeks.length === 0 ? (
-            <div style={{ fontSize: '14px', color: '#555' }}>Noch keine abgeschlossenen Wochen.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {weeks.map((week, index) => (
-                <div key={week.id} style={{ background: '#181614', border: '0.5px solid #2a2820', borderRadius: '12px', overflow: 'hidden' }}>
-                  <div style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {week.winnerFilm?.poster_path && (
-                      <img src={`https://image.tmdb.org/t/p/w92${week.winnerFilm.poster_path}`} style={{ width: '40px', borderRadius: '4px', flexShrink: 0 }} />
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '11px', color: '#555', marginBottom: '3px' }}>Woche {week.week_number}</div>
-                      <div style={{ fontSize: '15px', fontWeight: '500' }}>{week.winnerFilm?.title || 'Kein Gewinner'}</div>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{week.winnerFilm?.year}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '500', color: '#c0392b' }}>{getMoodLabel(week.avgRating)}</div>
-                      <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{week.ratings?.length || 0} Bewertungen</div>
-                    </div>
+        {weeks.length === 0 ? (
+          <div style={{ fontSize: '14px', color: '#444' }}>Noch keine abgeschlossenen Wochen.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '700px' }}>
+            {weeks.map((week, index) => (
+              <div key={week.id} style={{ background: '#0e0e0e', border: '0.5px solid #1a1a1a', borderRadius: '12px', overflow: 'hidden', display: 'flex' }}>
+                {week.winnerFilm?.poster_path && (
+                  <img src={`https://image.tmdb.org/t/p/w92${week.winnerFilm.poster_path}`} style={{ width: '56px', objectFit: 'cover', flexShrink: 0 }} />
+                )}
+                <div style={{ padding: '1rem 1.25rem', flex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: '#444', marginBottom: '4px' }}>Woche {week.week_number}</div>
+                    <div style={{ fontSize: '16px', fontWeight: '500' }}>{week.winnerFilm?.title || 'Kein Gewinner'}</div>
+                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>{week.winnerFilm?.year}</div>
                   </div>
-                  <div style={{ borderTop: '0.5px solid #2a2820', padding: '8px 1.25rem', display: 'flex', gap: '16px' }}>
-                    <div style={{ fontSize: '12px', color: '#555' }}>{week.films?.length || 0} Filme vorgeschlagen</div>
-                    <div style={{ fontSize: '12px', color: '#555' }}>{week.votes?.length || 0} Votes</div>
-                    {week.avgRating !== null && <div style={{ fontSize: '12px', color: '#555' }}>Ø {week.avgRating}/100</div>}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: '500', color: '#c8a96e' }}>{getMoodLabel(week.avgRating)}</div>
+                    <div style={{ fontSize: '11px', color: '#444', marginTop: '2px' }}>{week.ratings?.length || 0} Bewertungen</div>
+                  </div>
+                  <div style={{ textAlign: 'right', minWidth: '80px' }}>
+                    <div style={{ fontSize: '11px', color: '#444' }}>{week.films?.length || 0} Filme</div>
+                    <div style={{ fontSize: '11px', color: '#444', marginTop: '2px' }}>{week.votes?.length || 0} Votes</div>
+                    {week.avgRating !== null && <div style={{ fontSize: '11px', color: '#444', marginTop: '2px' }}>Ø {week.avgRating}/100</div>}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   )

@@ -17,6 +17,10 @@ export default function ScreeningRoom() {
   const [revealedLevels, setRevealedLevels] = useState({})
   const [revealed, setRevealed] = useState(false)
   const [winnerFilm, setWinnerFilm] = useState(null)
+  const [noGroup, setNoGroup] = useState(false)
+  const [inviteCode, setInviteCode] = useState('')
+  const [groupName, setGroupName] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -36,7 +40,12 @@ export default function ScreeningRoom() {
 
   async function loadData(userId) {
     const { data: memberData } = await supabase.from('group_members').select('group_id, groups(id, name, invite_code)').eq('user_id', userId).single()
-    if (!memberData) { window.location.href = '/dashboard'; return }
+    
+    if (!memberData) {
+      setNoGroup(true)
+      return
+    }
+    
     setGroup(memberData.groups)
     const { data: membersData } = await supabase.from('group_members').select('user_id, users(username, email)').eq('group_id', memberData.groups.id)
     setMembers(membersData || [])
@@ -115,7 +124,54 @@ export default function ScreeningRoom() {
   function getInitials(member) { return (member?.users?.username || member?.users?.email || '?').substring(0, 2).toUpperCase() }
   function getModerator() { return members.find(m => m.user_id === week?.moderator_id) }
 
-  if (!user || !group) return null
+  async function createGroup() {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const { data } = await supabase.from('groups').insert({ name: groupName, invite_code: code, created_by: user.id }).select().single()
+    await supabase.from('group_members').insert({ group_id: data.id, user_id: user.id, is_moderator: true })
+    await supabase.from('users').upsert({ id: user.id, email: user.email, username: user.email.split('@')[0] })
+    setGroup(data); setNoGroup(false)
+  }
+
+  async function joinGroup() {
+    const { data: groupData } = await supabase.from('groups').select().eq('invite_code', inviteCode.toUpperCase()).single()
+    if (!groupData) return
+    await supabase.from('group_members').insert({ group_id: groupData.id, user_id: user.id })
+    setGroup(groupData); setNoGroup(false)
+    loadData(user.id)
+  }
+
+  if (!user) return null
+
+  if (noGroup) return (
+    <main style={{ minHeight: '100vh', background: '#080808', color: '#e8e4dc', fontFamily: 'sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
+        <div style={{ fontFamily: 'Georgia, serif', fontSize: '13px', letterSpacing: '0.25em', marginBottom: '3rem' }}>
+          CINE<span style={{ color: '#c8a96e' }}>MATCH</span>
+        </div>
+        <div style={{ fontSize: '24px', fontWeight: '500', marginBottom: '8px' }}>Willkommen</div>
+        <div style={{ fontSize: '14px', color: '#555', marginBottom: '2.5rem' }}>Erstelle eine Gruppe oder tritt einer bei.</div>
+
+        {!showCreate ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ background: '#111', border: '0.5px solid #222', borderRadius: '12px', padding: '1.25rem' }}>
+              <div style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>Invite-Code eingeben</div>
+              <input value={inviteCode} onChange={e => setInviteCode(e.target.value)} placeholder="z.B. AB12CD" style={{ width: '100%', padding: '9px 12px', background: '#080808', border: '0.5px solid #222', borderRadius: '8px', color: '#e8e4dc', fontSize: '14px', outline: 'none', marginBottom: '10px', display: 'block' }} />
+              <button onClick={joinGroup} style={{ width: '100%', background: '#c8a96e', border: 'none', borderRadius: '8px', color: '#080808', padding: '10px', fontSize: '14px', cursor: 'pointer', fontWeight: '500' }}>Beitreten</button>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '13px', color: '#444' }}>oder</div>
+            <button onClick={() => setShowCreate(true)} style={{ background: 'none', border: '0.5px solid #222', borderRadius: '8px', color: '#666', padding: '10px', fontSize: '13px', cursor: 'pointer' }}>Neue Gruppe erstellen</button>
+          </div>
+        ) : (
+          <div style={{ background: '#111', border: '0.5px solid #222', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>Gruppenname</div>
+            <input value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="z.B. Filmclub Freitag" style={{ width: '100%', padding: '9px 12px', background: '#080808', border: '0.5px solid #222', borderRadius: '8px', color: '#e8e4dc', fontSize: '14px', outline: 'none', marginBottom: '10px', display: 'block' }} />
+            <button onClick={createGroup} style={{ width: '100%', background: '#c8a96e', border: 'none', borderRadius: '8px', color: '#080808', padding: '10px', fontSize: '14px', cursor: 'pointer', fontWeight: '500' }}>Erstellen</button>
+          </div>
+        )}
+      </div>
+    </main>
+  )
+
   const mod = getModerator()
   const allVoted = week && votes.length >= members.length && members.length > 0
 
@@ -180,7 +236,7 @@ export default function ScreeningRoom() {
 
         <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
           <div style={{ fontSize: '11px', color: '#444', marginBottom: '6px' }}>Invite-Code</div>
-          <div style={{ fontSize: '15px', fontWeight: '500', color: '#c8a96e', letterSpacing: '0.15em' }}>{group.invite_code}</div>
+          <div style={{ fontSize: '15px', fontWeight: '500', color: '#c8a96e', letterSpacing: '0.15em' }}>{group?.invite_code}</div>
         </div>
       </div>
 
