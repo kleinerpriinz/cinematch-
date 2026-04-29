@@ -96,10 +96,11 @@ const [myRatingScore, setMyRatingScore] = useState(null)
 
   async function proposeFilm(tmdbFilm) {
     const year = tmdbFilm.release_date?.substring(0, 4)
-    const details = await fetch(`https://api.themoviedb.org/3/movie/${tmdbFilm.id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=de-DE&append_to_response=credits`).then(r => r.json())
+    const details = await fetch(`https://api.themoviedb.org/3/movie/${tmdbFilm.id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=de-DE&append_to_response=credits,watch/providers`).then(r => r.json())
     const director = details.credits?.crew?.find(c => c.job === 'Director')?.name || ''
     const genre = details.genres?.map(g => g.name).join(', ') || ''
-    await supabase.from('films').insert({ week_id: week.id, tmdb_id: tmdbFilm.id, title: tmdbFilm.title, year: parseInt(year), genre, director, poster_path: tmdbFilm.poster_path, backdrop_path: tmdbFilm.backdrop_path || '', proposed_by: user.id })
+    const providers = details['watch/providers']?.results?.DE?.flatrate?.map(p => p.provider_name).join(', ') || ''
+    await supabase.from('films').insert({ week_id: week.id, tmdb_id: tmdbFilm.id, title: tmdbFilm.title, year: parseInt(year), genre, director, poster_path: tmdbFilm.poster_path, backdrop_path: tmdbFilm.backdrop_path || '', proposed_by: user.id, streaming_providers: providers })
     setSearchResults([]); setSearchQuery(''); setShowSearch(false)
     loadFilms(week.id, user.id)
   }
@@ -392,6 +393,11 @@ const [myRatingScore, setMyRatingScore] = useState(null)
                           <div style={{ fontSize: '13px', color: '#c8a96e', fontWeight: '500', marginBottom: '6px' }}>
                             {voteCount} {voteCount === 1 ? 'Stimme' : 'Stimmen'}
                           </div>
+                          {film.streaming_providers && (
+  <div style={{ fontSize: '10px', color: '#555', marginTop: '4px', paddingTop: '6px', borderTop: '0.5px solid #1a1a1a' }}>
+    ▶ {film.streaming_providers}
+  </div>
+)}
                           {voters.length > 0 && (
                             <div style={{ display: 'flex', gap: '3px' }}>
 {voters.slice(0, 4).map((voter, i) => (
