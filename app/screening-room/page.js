@@ -203,6 +203,8 @@ export default function ScreeningRoom() {
   const leadingFilmId = getLeadingFilm()
   const activeBg = bgFilm || (films.length > 0 ? films[0] : null)
 
+  const moderatorWeekPoints = members.find(m => m.user_id === week?.moderator_id)?.cine_points || 0
+  
   return (
     <main style={{ minHeight: '100vh', background: '#080808', color: '#e8e4dc', fontFamily: 'sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
 
@@ -248,16 +250,28 @@ export default function ScreeningRoom() {
                 <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #c8a96e', background: '#c8a96e' }} />
                 <div style={{ width: '1px', height: '100%', minHeight: '5rem', background: '#c8a96e', opacity: 0.4 }} />
               </div>
-              <div style={{ background: 'rgba(200,169,110,0.07)', border: '1px solid rgba(200,169,110,0.25)', borderRadius: '12px', padding: '1rem', flex: 1 }}>
-                <div style={{ fontSize: '10px', color: '#c8a96e', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px' }}>Diese Woche</div>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '500', marginBottom: '10px', border: '1.5px solid #333', overflow: 'hidden' }}>
-                  {mod.users?.avatar_url
-                    ? <img src={mod.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : getInitials(mod)}
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '500', marginBottom: '4px' }}>{mod.users?.username || mod.users?.email}</div>
-                <div style={{ fontSize: '12px', color: '#c8a96e' }}>★ Moderator</div>
-              </div>
+              <div style={{ background: 'rgba(200,169,110,0.07)', border: '1px solid rgba(200,169,110,0.25)', borderRadius: '12px', padding: '1.25rem', flex: 1, position: 'relative' }}>
+  <div style={{ fontSize: '10px', color: '#c8a96e', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>Moderator</div>
+  <div style={{ position: 'relative', width: '64px', height: '64px', marginBottom: '12px' }}>
+    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#222', overflow: 'hidden', border: '2px solid rgba(200,169,110,0.3)' }}>
+      {mod.users?.avatar_url
+        ? <img src={mod.users.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '500', color: '#c8a96e' }}>{getInitials(mod)}</div>
+      }
+    </div>
+    <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '22px', height: '22px', borderRadius: '50%', background: '#7B5EA7', border: '2px solid #080808', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
+      👑
+    </div>
+  </div>
+  <div style={{ fontSize: '17px', fontWeight: '500', marginBottom: '10px' }}>{mod.users?.username || mod.users?.email}</div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ fontSize: '18px' }}>⭐</div>
+    <div>
+      <div style={{ fontSize: '16px', fontWeight: '500', color: '#c8a96e' }}>+{moderatorWeekPoints}</div>
+      <div style={{ fontSize: '11px', color: '#555' }}>Punkte diese Woche</div>
+    </div>
+  </div>
+</div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', paddingTop: '1rem', opacity: 0.3 }}>
